@@ -3,10 +3,10 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
-    image: smartlab:test_image_gpu
-    container_name: test_container_gpu
+    image: unstable-diffusion:train
+    container_name: train
     volumes:
-    - Z:\data\celeba\img_align_celeba:/home/custom_user/
+    - Z:\data\celeba\img_align_celeba:/home/custom_user/dl-hf/data/celeba
     ports:
     - "8899:8888"
     - "2299:22"
