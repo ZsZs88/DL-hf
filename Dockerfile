@@ -11,10 +11,24 @@ RUN apt-get update &&  \
 
 ENV HOME /home/custom_user
 RUN mkdir -p $HOME/dl-hf
-RUN mkdir -p $HOME/dl-hf/data
+
+RUN mkdir -p $HOME/dl-hf/celeba
+RUN mkdir -p $HOME/dl-hf/celeba/data
+RUN mkdir -p $HOME/dl-hf/celeba/figs
+RUN mkdir -p $HOME/dl-hf/celeba/samples
+RUN mkdir -p $HOME/dl-hf/celeba/models
+RUN mkdir -p $HOME/dl-hf/celeba/logs
+
+RUN mkdir -p $HOME/dl-hf/danbooru
+RUN mkdir -p $HOME/dl-hf/danbooru/data
+RUN mkdir -p $HOME/dl-hf/danbooru/figs
+RUN mkdir -p $HOME/dl-hf/danbooru/samples
+RUN mkdir -p $HOME/dl-hf/danbooru/models
+RUN mkdir -p $HOME/dl-hf/danbooru/logs
+
 WORKDIR $HOME/dl-hf
-ENV CELEBA=${CELEBA:-$HOME/dl-hf/data/celeba}
-ENV DANBOORU=${DANBOORU:-$HOME/dl-hf/data/danbooru}
+ENV CELEBA=${CELEBA:-$HOME/dl-hf/celeba}
+ENV DANBOORU=${DANBOORU:-$HOME/dl-hf/danbooru}
 
 RUN pip freeze
 

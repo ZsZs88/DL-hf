@@ -6,15 +6,15 @@ services:
     image: unstable-diffusion:train
     container_name: train
     volumes:
-    - Z:\data\celeba\img_align_celeba:/home/custom_user/dl-hf/data/celeba
+      - Z:\data\celeba\img_align_celeba:/home/custom_user/dl-hf/celeba/data
     ports:
-    - "8899:8888"
-    - "2299:22"
+      - "8899:8888"
+      - "2299:22"
     restart: unless-stopped
     deploy:
       resources:
         reservations:
           devices:
-          - driver: "nvidia"
-            capabilities: [ "gpu" ]
-            count: 1
+            - driver: "nvidia"
+              capabilities: ["gpu"]
+              count: 1
