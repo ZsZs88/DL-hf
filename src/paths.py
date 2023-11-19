@@ -8,7 +8,7 @@ celeba = {
     "data": os.path.join(celeba_base_path, "data"),
     "figs": os.path.join(celeba_base_path, "figs"),
     "samples": os.path.join(celeba_base_path, "samples"),
-    "model": os.path.join(celeba_base_path, "model"),
+    "models": os.path.join(celeba_base_path, "model"),
     "logs": os.path.join(celeba_base_path, "logs"),
 }
 
@@ -16,6 +16,6 @@ danbooru = {
     "data": os.path.join(danbooru_base_path, "data"),
     "figs": os.path.join(danbooru_base_path, "figs"),
     "samples": os.path.join(danbooru_base_path, "samples"),
-    "model": os.path.join(danbooru_base_path, "model"),
+    "models": os.path.join(danbooru_base_path, "model"),
     "logs": os.path.join(danbooru_base_path, "logs"),
 }

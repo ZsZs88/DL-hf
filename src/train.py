@@ -193,7 +193,7 @@ class Trainer:
         # plt.title(title)
         img = img.transpose(1, 2, 0)
         plt.imsave(os.path.join(self.sample_path, title), img)
-        plt.imshow(img.transpose(1, 2, 0))
+        plt.imshow(img)
 
     def _sample_x0(self, xt: torch.Tensor, n_steps: int):
         n_samples = xt.shape[0]
