@@ -42,6 +42,8 @@ The whole pipeline is controlled from there
 
 ## Training
 
+**Important note:** the training requires a lot of computing power and time, therefore exact metrics for the test cannot be given (training and validation losses, FID scores to come)
+
 The training is done by running the cells in the jupyter notebook
 
 ## Evaluation
