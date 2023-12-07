@@ -10,15 +10,23 @@ import os
 import time
 from torch import nn
 from typing import Optional
+from pytorch_fid import fid_score
 
 import matplotlib.pyplot as plt
+import numpy as np
+import random
 import wandb
 
 
 class Trainer:
     def __init__(self, parallel: Optional[bool] = True):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # TODO: image_size, batch_size
+        # DEFAULT VALUES IF DATALOADERS HAVE TO BE CREATED
         self.image_size = 96
+        self.batch_size = 256
+
         self.image_channels = 3
         self.n_channels = 64
         self.channel_multipliers = [1, 2, 2, 4]
@@ -27,7 +35,6 @@ class Trainer:
         self.n_steps = 1000
         self.n_samples = 16
 
-        self.batch_size = 256
         self.learning_rate = 2e-5
         self.epochs = 100
 
@@ -37,6 +44,7 @@ class Trainer:
             ch_mults=self.channel_multipliers,
             is_attn=self.is_attention,
         )
+        # TODO: WATCH OUT FOR PARALLEL
         if parallel:
             self.eps_model = nn.DataParallel(self.eps_model, device_ids=[0, 1, 2])
         self.eps_model.to(self.device)
@@ -118,6 +126,9 @@ class Trainer:
         self.add_model_path(_paths["models"])
         self.add_logs_path(_paths["logs"])
 
+    def add_model(self, model_path: str):
+        self.eps_model.load_state_dict(torch.load(model_path))
+
     def training_step(self):
         running_loss = 0.0
         self.set_seeds(self.manual_seed)
@@ -187,14 +198,6 @@ class Trainer:
                 )
                 self.sample(n_samples=self.n_samples, filename=f"sample_{epoch}.png")
 
-    def show_image(self, img: torch.Tensor, title: Optional[str] = ""):
-        img = img.clip(0, 1)
-        img = img.cpu().numpy()
-        # plt.title(title)
-        img = img.transpose(1, 2, 0)
-        plt.imsave(os.path.join(self.sample_path, title), img)
-        plt.imshow(img)
-
     def _sample_x0(self, xt: torch.Tensor, n_steps: int):
         n_samples = xt.shape[0]
         for t in range(self.n_steps)[::-1]:
@@ -203,7 +206,45 @@ class Trainer:
             )
         return xt
 
-    def sample(
+    def get_img(self, img: torch.Tensor) -> np.ndarray:
+        img = img.clip(0, 1)
+        img = img.cpu().numpy()
+        img = img.transpose(1, 2, 0)
+        return img
+
+    def show_image(
+        self, img: np.ndarray, title: Optional[str] = None, save: Optional[bool] = False
+    ):
+        if title is None:
+            title = f"{random.randint(0, 100000)}.png"
+        if save:
+            plt.imsave(os.path.join(self.sample_path, title), img)
+        plt.imshow(img)
+
+    # Sampling for GUI
+    def sample_one_for_GUI(
+        self,
+        model_path: Optional[nn.Module] = None,
+    ) -> np.ndarray:
+        with torch.no_grad():
+            # self.set_seeds(self.manual_seed)
+            if model_path is not None:
+                self.eps_model.load_state_dict(torch.load(model_path))
+            self.eps_model.eval()
+            xt = torch.randn(
+                [
+                    1,
+                    self.image_channels,
+                    self.image_size[0],
+                    self.image_size[1],
+                ],
+                device=self.device,
+            )
+            x0 = self._sample_x0(xt, self.n_steps)
+            img = self.get_img(x0)
+            return img
+
+    def sample_without_figs(
         self,
         n_samples: Optional[int] = 16,
         filename: Optional[str] = "sample.png",
@@ -212,16 +253,85 @@ class Trainer:
         with torch.no_grad():
             if model_path is not None:
                 self.eps_model.load_state_dict(torch.load(model_path))
-                self.eps_model.eval()
-            self.set_seeds(self.manual_seed)
+            self.eps_model.eval()
+            # self.set_seeds(self.manual_seed)
             xt = torch.randn(
-                [n_samples, self.image_channels, self.image_size, self.image_size],
+                [
+                    n_samples,
+                    self.image_channels,
+                    self.image_size[0],
+                    self.image_size[1],
+                ],
                 device=self.device,
             )
             x0 = self._sample_x0(xt, self.n_steps)
             for i in range(n_samples):
-                plt.subplot(n_samples // 4, n_samples // 4, i + 1)
-                self.show_image(x0[i])
-            plt.tight_layout()
-            # TODO: fig path
-            plt.savefig(os.path.join(self.fig_path, filename))
+                img = self.get_img(x0[i])
+                self.show_image(img, title=f"{i}.png", save=True)
+
+    def sample(
+        self,
+        n_samples: Optional[int] = 16,
+        filename: Optional[str] = "sample.png",
+        model_path: Optional[nn.Module] = None,
+    ):
+        self.sample_without_figs(
+            n_samples=n_samples, filename=filename, model_path=model_path
+        )
+        plt.savefig(os.path.join(self.fig_path, filename))
+
+    def test_FID(self, path1, path2) -> float:
+        fid_value = fid_score.calculate_fid_given_paths(
+            # TODO
+            [path1, path2],
+            batch_size=64,
+            device=self.device,
+            dims=2048,
+        )
+        return fid_value
+
+
+# if __name__ == "__main__":
+#     wandb.init(project="dl-hf_celeba")
+#     trainer = Trainer()
+#     trainer.add_paths(paths.other)
+
+#     RANDOM_SEED = 43
+
+#     generator = torch.Generator().manual_seed(RANDOM_SEED)
+#     torch.manual_seed(RANDOM_SEED)
+#     torch.cuda.manual_seed_all(RANDOM_SEED)
+#     torch.backends.cudnn.deterministic = True
+
+#     data = ImageFolder(root=paths.other["root"], transform=trainer.transform)
+#     train_data, val_data, test_data = random_split(
+#         data, [0.8, 0.1, 0.1], generator=generator
+#     )
+
+#     train_dataloader = DataLoader(
+#         train_data,
+#         batch_size=trainer.batch_size,
+#         shuffle=True,
+#         num_workers=8,
+#         pin_memory=True,
+#         drop_last=True,
+#     )
+#     val_dataloader = DataLoader(
+#         val_data,
+#         batch_size=trainer.batch_size,
+#         shuffle=True,
+#         num_workers=8,
+#         pin_memory=True,
+#         drop_last=True,
+#     )
+#     test_dataloader = DataLoader(
+#         test_data,
+#         batch_size=trainer.batch_size,
+#         shuffle=True,
+#         num_workers=8,
+#         pin_memory=True,
+#         drop_last=True,
+#     )
+
+#     trainer.add_dataloaders(train_dataloader, val_dataloader, test_dataloader)
+#     trainer.train()
