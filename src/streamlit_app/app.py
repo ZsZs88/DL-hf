@@ -2,19 +2,23 @@ import streamlit as st
 
 
 def render(celeba_trainer, danbooru_trainer):
+    session = st.session_state
     st.title(body="Unstable Diffusion")
-    celeba_tab, danbooru_tab = st.tabs(["CelebA", "Danbooru"])
+    celeba_col, danbooru_col = st.columns([1, 1], gap="large")
 
-    with celeba_tab:
+    with celeba_col:
+        if "celeba_img" in session:
+            st.image(session["celeba_img"])
         if st.button(label="Generate", key="celeba_generate_btn"):
-            # celeba_img = celeba_trainer.sample()
-            # st.image(celeba_img)
-            pass
-    with danbooru_tab:
+            # session["celeba_img"] = celeba_trainer.sample()
+            st.rerun()
+    with danbooru_col:
+        if "danbooru_img" in session:
+            st.image(session["danbooru_img"])
         if st.button(label="Generate", key="danbooru_generate_btn"):
-            # danbooru_img = danbooru_trainer.sample()
-            # st.image(danbooru_trainer)
-            pass
+            # session["danbooru_img"] = danbooru_trainer.sample()
+            st.rerun()
+
 
 
 if __name__ == "__main__":
