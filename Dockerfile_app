@@ -3,17 +3,16 @@ FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update &&  \
-	apt install -y  \
-	openssh-server \
-	git \
-	libgl1 \
-	nano
+    apt install -y  \
+    openssh-server \
+    git \
+    libgl1 \
+    nano
 
 ENV HOME /home/custom_user
 RUN mkdir -p $HOME/dl-hf
 RUN mkdir -p $HOME/dl-hf/celeba
 RUN mkdir -p $HOME/dl-hf/danbooru
-
 
 WORKDIR $HOME/dl-hf
 ENV CELEBA=${CELEBA:-$HOME/dl-hf/celeba}
@@ -27,7 +26,7 @@ COPY requirements.txt requirements.txt
 COPY requirements-cuda.txt requirements-cuda.txt
 
 EXPOSE 22
-EXPOSE 8888
+EXPOSE 8501
 
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
@@ -38,11 +37,12 @@ RUN echo 'custom_user:unstable-diffusion' | chpasswd
 
 SHELL ["/bin/bash", "-l", "-c"]
 
-# Start Jupyter lab with custom password
-ENTRYPOINT service ssh start && jupyter-lab \
-	--ip 0.0.0.0 \
-	--port 8888 \
-	--no-browser \
-	--NotebookApp.notebook_dir='$home/src' \
-	--ServerApp.terminado_settings="shell_command=['/bin/bash']" \
-	--allow-root
+# ENTRYPOINT service ssh start && echo $(ls) && jupyter-lab \
+#     --ip 0.0.0.0 \
+#     --port 8888 \
+#     --no-browser \
+#     --NotebookApp.notebook_dir='$home/src' \
+#     --ServerApp.terminado_settings="shell_command=['/bin/bash']" \
+#     --allow-root
+
+ENTRYPOINT echo && streamlit run src/app.py

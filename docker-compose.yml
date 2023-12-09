@@ -1,15 +1,34 @@
 services:
-  srserver:
+  train:
     build:
       context: ./
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile_train
     image: unstable-diffusion:train
     container_name: train
     volumes:
-      - Z:\data\celeba:/home/custom_user/dl-hf/celeba
+      - Z:\Egyetem\DL-hf\data\celeba:/home/custom_user/dl-hf/celeba
     ports:
       - "8899:8888"
       - "2299:22"
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: "nvidia"
+              capabilities: ["gpu"]
+              count: 1
+  app:
+    build:
+      context: ./
+      dockerfile: Dockerfile_app
+    image: unstable-diffusion:app
+    container_name: app
+    volumes:
+      - Z:\Egyetem\DL-hf\data\danbooru:/home/custom_user/dl-hf/danbooru
+    ports:
+      - "8588:8501"
+      - "2288:22"
     restart: unless-stopped
     deploy:
       resources:

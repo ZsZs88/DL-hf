@@ -1,5 +1,6 @@
 import streamlit as st
-
+import sys
+import os
 import train
 import paths
 
@@ -24,14 +25,12 @@ def render(celeba_trainer, danbooru_trainer):
 
 
 if __name__ == "__main__":
-    celeba_trainer = train.Trainer()
+    celeba_trainer = train.Trainer(parallel=False)
     celeba_trainer.add_paths(paths.celeba)
-    celeba_trainer.add_model(
-        "/home/l0026@njmcs.local/data/Generative/datasets/celeba/models/sample_30.pth"
-    )
-    danbooru_trainer = train.Trainer()
+    celeba_trainer.add_model(os.path.join(paths.celeba["models"], "sample_30.pth"))
+    celeba_trainer.modify_imagesize((80, 64))
+    danbooru_trainer = train.Trainer(parallel=False)
     danbooru_trainer.add_paths(paths.danbooru)
-    danbooru_trainer.add_model(
-        "/home/l0026@njmcs.local/data/Generative/datasets/danbooru/models/sample_30.pth"
-    )
+    danbooru_trainer.add_model(os.path.join(paths.danbooru["models"], "sample_30.pth"))
+    danbooru_trainer.modify_imagesize((64, 64))
     render(celeba_trainer=celeba_trainer, danbooru_trainer=danbooru_trainer)

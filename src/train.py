@@ -9,7 +9,7 @@ import paths
 import os
 import time
 from torch import nn
-from typing import Optional
+from typing import Optional, Tuple
 from pytorch_fid import fid_score
 
 import matplotlib.pyplot as plt
@@ -24,7 +24,7 @@ class Trainer:
 
         # TODO: image_size, batch_size
         # DEFAULT VALUES IF DATALOADERS HAVE TO BE CREATED
-        self.image_size = 96
+        self.image_size = (64, 64)
         self.batch_size = 256
 
         self.image_channels = 3
@@ -45,7 +45,8 @@ class Trainer:
             is_attn=self.is_attention,
         )
         # TODO: WATCH OUT FOR PARALLEL
-        if parallel:
+        self.parallel = parallel
+        if self.parallel:
             self.eps_model = nn.DataParallel(self.eps_model, device_ids=[0, 1, 2])
         self.eps_model.to(self.device)
 
@@ -127,7 +128,17 @@ class Trainer:
         self.add_logs_path(_paths["logs"])
 
     def add_model(self, model_path: str):
-        self.eps_model.load_state_dict(torch.load(model_path))
+        state_dict = torch.load(model_path)
+        # print(state_dict.keys())
+        if not self.parallel:
+            state_dict = {
+                key.replace("module.", ""): value for key, value in state_dict.items()
+            }
+        # print(state_dict.keys())
+        self.eps_model.load_state_dict(state_dict)
+
+    def modify_imagesize(self, image_size: Tuple[int, int]):
+        self.image_size = image_size
 
     def training_step(self):
         running_loss = 0.0
@@ -229,7 +240,7 @@ class Trainer:
         with torch.no_grad():
             # self.set_seeds(self.manual_seed)
             if model_path is not None:
-                self.eps_model.load_state_dict(torch.load(model_path))
+                self.eps_model.load_state_dict(torch.load(model_path), strict=False)
             self.eps_model.eval()
             xt = torch.randn(
                 [
@@ -241,7 +252,7 @@ class Trainer:
                 device=self.device,
             )
             x0 = self._sample_x0(xt, self.n_steps)
-            img = self.get_img(x0)
+            img = self.get_img(x0[0])
             return img
 
     def sample_without_figs(
