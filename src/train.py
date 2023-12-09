@@ -238,7 +238,7 @@ class Trainer:
         model_path: Optional[nn.Module] = None,
     ) -> np.ndarray:
         with torch.no_grad():
-            # self.set_seeds(self.manual_seed)
+            self.set_seeds(np.random.randint(0, 100000))
             if model_path is not None:
                 self.eps_model.load_state_dict(torch.load(model_path), strict=False)
             self.eps_model.eval()
@@ -265,7 +265,6 @@ class Trainer:
             if model_path is not None:
                 self.eps_model.load_state_dict(torch.load(model_path))
             self.eps_model.eval()
-            # self.set_seeds(self.manual_seed)
             xt = torch.randn(
                 [
                     n_samples,

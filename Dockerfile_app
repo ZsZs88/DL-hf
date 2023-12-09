@@ -45,4 +45,4 @@ SHELL ["/bin/bash", "-l", "-c"]
 #     --ServerApp.terminado_settings="shell_command=['/bin/bash']" \
 #     --allow-root
 
-ENTRYPOINT echo && streamlit run src/app.py
+ENTRYPOINT service ssh start && streamlit run src/app.py

@@ -7,6 +7,7 @@ services:
     container_name: train
     volumes:
       - Z:\Egyetem\DL-hf\data\celeba:/home/custom_user/dl-hf/celeba
+      - Z:\Egyetem\DL-hf\data\danbooru:/home/custom_user/dl-hf/danbooru
     ports:
       - "8899:8888"
       - "2299:22"
@@ -25,6 +26,7 @@ services:
     image: unstable-diffusion:app
     container_name: app
     volumes:
+      - Z:\Egyetem\DL-hf\data\celeba:/home/custom_user/dl-hf/celeba
       - Z:\Egyetem\DL-hf\data\danbooru:/home/custom_user/dl-hf/danbooru
     ports:
       - "8588:8501"

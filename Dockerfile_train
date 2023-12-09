@@ -38,7 +38,7 @@ RUN echo 'custom_user:unstable-diffusion' | chpasswd
 SHELL ["/bin/bash", "-l", "-c"]
 
 # Start Jupyter lab with custom password
-ENTRYPOINT service ssh start && echo $(ls) && jupyter-lab \
+ENTRYPOINT service ssh start && jupyter-lab \
 	--ip 0.0.0.0 \
 	--port 8888 \
 	--no-browser \

@@ -2,11 +2,11 @@ import sys
 import os
 
 
-# celeba_base_path = os.environ.get("CELEBA")
-# danbooru_base_path = os.environ.get("DANBOORU")
+celeba_base_path = os.environ.get("CELEBA")
+danbooru_base_path = os.environ.get("DANBOORU")
 
-celeba_base_path = "Z:\Egyetem\DL-hf\data\celeba"
-danbooru_base_path = "Z:\Egyetem\DL-hf\data\danbooru"
+# celeba_base_path = "Z:\Egyetem\DL-hf\data\celeba"
+# danbooru_base_path = "Z:\Egyetem\DL-hf\data\danbooru"
 
 celeba = {
     "data": os.path.join(celeba_base_path, "data"),
