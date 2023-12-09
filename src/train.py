@@ -102,11 +102,11 @@ class Trainer:
         self,
         train_dataloader: DataLoader,
         val_dataloader: DataLoader,
-        test_dataloader: DataLoader,
+        # test_dataloader: DataLoader,
     ):
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
-        self.test_dataloader = test_dataloader
+        # self.test_dataloader = test_dataloader
 
     def add_fig_path(self, fig_path: str):
         self.fig_path = fig_path
@@ -129,12 +129,10 @@ class Trainer:
 
     def add_model(self, model_path: str):
         state_dict = torch.load(model_path)
-        # print(state_dict.keys())
         if not self.parallel:
             state_dict = {
                 key.replace("module.", ""): value for key, value in state_dict.items()
             }
-        # print(state_dict.keys())
         self.eps_model.load_state_dict(state_dict)
 
     def modify_imagesize(self, image_size: Tuple[int, int]):
@@ -211,7 +209,7 @@ class Trainer:
 
     def _sample_x0(self, xt: torch.Tensor, n_steps: int):
         n_samples = xt.shape[0]
-        for t in range(self.n_steps)[::-1]:
+        for t in range(n_steps)[::-1]:
             xt = self.diffusion.p_sample(
                 xt, xt.new_full((n_samples,), t, dtype=torch.long)
             )
@@ -230,7 +228,8 @@ class Trainer:
             title = f"{random.randint(0, 100000)}.png"
         if save:
             plt.imsave(os.path.join(self.sample_path, title), img)
-        plt.imshow(img)
+        # TODO: ez kell
+        # plt.imshow(img)
 
     # Sampling for GUI
     def sample_one_for_GUI(
@@ -258,26 +257,43 @@ class Trainer:
     def sample_without_figs(
         self,
         n_samples: Optional[int] = 16,
-        filename: Optional[str] = "sample.png",
         model_path: Optional[nn.Module] = None,
+        batching: Optional[bool] = False,
     ):
         with torch.no_grad():
             if model_path is not None:
                 self.eps_model.load_state_dict(torch.load(model_path))
             self.eps_model.eval()
-            xt = torch.randn(
-                [
-                    n_samples,
-                    self.image_channels,
-                    self.image_size[0],
-                    self.image_size[1],
-                ],
-                device=self.device,
-            )
-            x0 = self._sample_x0(xt, self.n_steps)
-            for i in range(n_samples):
-                img = self.get_img(x0[i])
-                self.show_image(img, title=f"{i}.png", save=True)
+            if batching:
+                batches = n_samples // 16
+                for j in range(batches):
+                    xt = torch.randn(
+                        [
+                            16,
+                            self.image_channels,
+                            self.image_size[0],
+                            self.image_size[1],
+                        ],
+                        device=self.device,
+                    )
+                    x0 = self._sample_x0(xt, self.n_steps)
+                    for i in range(16):
+                        img = self.get_img(x0[i])
+                        self.show_image(img, title=f"{16*j + i}.png", save=True)
+            else:
+                xt = torch.randn(
+                    [
+                        n_samples,
+                        self.image_channels,
+                        self.image_size[0],
+                        self.image_size[1],
+                    ],
+                    device=self.device,
+                )
+                x0 = self._sample_x0(xt, self.n_steps)
+                for i in range(n_samples):
+                    img = self.get_img(x0[i])
+                    self.show_image(img, title=f"{i}.png", save=True)
 
     def sample(
         self,
@@ -290,11 +306,11 @@ class Trainer:
         )
         plt.savefig(os.path.join(self.fig_path, filename))
 
-    def test_FID(self, path1, path2) -> float:
+    def test_FID(self, path1: str, path2: str, batch_size: Optional[int] = 64) -> float:
         fid_value = fid_score.calculate_fid_given_paths(
             # TODO
             [path1, path2],
-            batch_size=64,
+            batch_size=batch_size,
             device=self.device,
             dims=2048,
         )

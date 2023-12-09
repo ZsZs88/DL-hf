@@ -3,7 +3,7 @@
 # Team Members:
 
 - Csik Laura - Z09RRY
-- Váradi Dominik - QCCH6T
+<!-- - Váradi Dominik - QCCH6T -->
 - Zsáli Zsombor - A6HFRW
 
 # Project Description
