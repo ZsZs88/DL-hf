@@ -1,3 +1,8 @@
+"""
+Trainer class implementation for interacting with the model.
+This class is responsible for giving an interface to the model for easier training, sampling, testing, etc.
+"""
+
 import torch
 from unet import UNet
 from diffusion import DenoiseDiffusion
@@ -19,7 +24,15 @@ import wandb
 
 
 class Trainer:
-    def __init__(self, parallel: Optional[bool] = True):
+    """Trainer class for interacting with the model."""
+
+    def __init__(self, parallel: Optional[bool] = True) -> None:
+        """
+        Initialize the trainer class.
+        parallel: whether to use parallelization or not
+        """
+
+        # device - cuda or cpu
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # TODO: image_size, batch_size
@@ -27,43 +40,55 @@ class Trainer:
         self.image_size = (64, 64)
         self.batch_size = 256
 
+        # Major model parameters
         self.image_channels = 3
         self.n_channels = 64
         self.channel_multipliers = [1, 2, 2, 4]
         self.is_attention = [False, False, True, True]
 
+        # Iteration steps for forward diffusion
         self.n_steps = 1000
+
+        # Number of samples to generate
         self.n_samples = 16
 
+        # Training parameters
         self.learning_rate = 2e-5
         self.epochs = 100
 
+        # U-Net model for backward diffusion
         self.eps_model = UNet(
             image_channels=self.image_channels,
             n_channels=self.n_channels,
             ch_mults=self.channel_multipliers,
             is_attn=self.is_attention,
         )
+
         # TODO: WATCH OUT FOR PARALLEL
+        # Parallelize the model if possible
         self.parallel = parallel
         if self.parallel:
             self.eps_model = nn.DataParallel(self.eps_model, device_ids=[0, 1, 2])
         self.eps_model.to(self.device)
 
+        # Whole diffusion model
         self.diffusion = DenoiseDiffusion(
             eps_model=self.eps_model,
             n_steps=self.n_steps,
             device=self.device,
         )
 
+        # Optimizer
         self.optimizer = Adam(self.eps_model.parameters(), lr=self.learning_rate)
 
+        # Image transformation
         self.transform = torchvision.transforms.Compose(
             [
                 torchvision.transforms.Resize(self.image_size),
                 torchvision.transforms.ToTensor(),
             ]
         )
+
         # TODO
 
         self.manual_seed = 22446688
@@ -76,6 +101,11 @@ class Trainer:
         # TODO: test data
 
     def set_seeds(self, seed: Optional[int] = 22446688) -> None:
+        """
+        Set seeds for reproducibility.
+        seed: seed to use
+        """
+
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
@@ -103,31 +133,68 @@ class Trainer:
         train_dataloader: DataLoader,
         val_dataloader: DataLoader,
         # test_dataloader: DataLoader,
-    ):
+    ) -> None:
+        """
+        Add dataloaders to the trainer.
+        train_dataloader: dataloader for training
+        val_dataloader: dataloader for validation
+        #test_dataloader: dataloader for testing
+        """
+
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         # self.test_dataloader = test_dataloader
 
-    def add_fig_path(self, fig_path: str):
+    def add_fig_path(self, fig_path: str) -> None:
+        """
+        Add path for saving figures.
+        fig_path: path to save figures
+        """
+
         self.fig_path = fig_path
 
-    def add_model_path(self, model_path: str):
+    def add_model_path(self, model_path: str) -> None:
+        """
+        Add path for saving models.
+        model_path: path to save models
+        """
+
         self.model_path = model_path
 
-    def add_logs_path(self, logs_path: str):
+    def add_logs_path(self, logs_path: str) -> None:
+        """
+        Add path for saving logs.
+        logs_path: path to save logs
+        """
+
         self.logs_path = logs_path
 
-    def add_sample_path(self, sample_path: str):
+    def add_sample_path(self, sample_path: str) -> None:
+        """
+        Add path for saving samples.
+        sample_path: path to save samples
+        """
+
         self.sample_path = sample_path
 
-    def add_paths(self, _paths: dict):
+    def add_paths(self, _paths: dict) -> None:
+        """
+        Add paths to the trainer.
+        _paths: dictionary containing paths
+        """
+
         # self.add_data(_paths["data"]["train"], _paths["data"]["valid"])
         self.add_fig_path(_paths["figs"])
         self.add_sample_path(_paths["samples"])
         self.add_model_path(_paths["models"])
         self.add_logs_path(_paths["logs"])
 
-    def add_model(self, model_path: str):
+    def add_model(self, model_path: str) -> None:
+        """
+        Add model to the trainer.
+        model_path: path to the model
+        """
+
         state_dict = torch.load(model_path)
         if not self.parallel:
             state_dict = {
@@ -135,13 +202,22 @@ class Trainer:
             }
         self.eps_model.load_state_dict(state_dict)
 
-    def modify_imagesize(self, image_size: Tuple[int, int]):
+    def modify_imagesize(self, image_size: Tuple[int, int]) -> None:
+        """
+        Modify image size.
+        image_size: new image size
+        """
+
         self.image_size = image_size
 
-    def training_step(self):
+    def training_step(self) -> float:
+        """Training step for one epoch."""
+
         running_loss = 0.0
-        self.set_seeds(self.manual_seed)
+
+        # Train one epoch in batches
         for batch in self.train_dataloader:
+            # We only need the data (labels are not used)
             data, labels = batch[0], batch[1]
             data = data.to(self.device)
             self.optimizer.zero_grad()
@@ -149,10 +225,15 @@ class Trainer:
             loss.backward()
             self.optimizer.step()
             running_loss += loss.item()
+
+        # Calculate average loss
         avg_loss = running_loss / len(self.train_dataloader)
         return avg_loss
 
-    def train(self):
+    def train(self) -> None:
+        """Train the model."""
+
+        # Initialize wandb logging
         wandb.watch(self.eps_model, log="all")
         wandb.log(
             {
@@ -167,47 +248,63 @@ class Trainer:
                 "epochs": self.epochs,
             }
         )
+
+        # Timestamp for logging
         self.time_measurement = time.time()
         print("Training started...")
+
+        # Train for epochs
         for ep in range(self.epochs):
+            # Set seeds for reproducibility
+            self.set_seeds(self.manual_seed)
+
             self.time_measurement = time.time()
             epoch = ep + 1
             print(f"Epoch {epoch}")
 
+            # Set model to train mode
             self.eps_model.train()
+
+            # Train one epoch
             avg_loss = self.training_step()
 
             running_vloss = 0.0
 
+            # Set model to eval mode
             self.eps_model.eval()
             print("\tValidating...")
             running_vloss = 0.0
+
+            # Validate one epoch
             with torch.no_grad():
-                self.set_seeds(self.manual_seed)
                 for batch in self.val_dataloader:
                     val_data, val_labels = batch[0], batch[1]
                     val_data = val_data.to(self.device)
                     vloss = self.diffusion.loss(val_data)
                     running_vloss += vloss.item()
+
+            # Calculate average validation loss
             avg_vloss = running_vloss / len(self.val_dataloader)
 
             wandb.log({"epoch": epoch, "train_loss": avg_loss, "val_loss": avg_vloss})
 
+            # Timestamp for logging
             epoch_finished = time.time()
             print(
                 f"\tEpoch finished in {epoch_finished - self.time_measurement} seconds"
             )
             print(f"\tTrain Loss: {avg_loss} | Val Loss: {avg_vloss}")
 
+            # Save model and sample images every 5 epochs
             if epoch % 5 == 0:
-                # TODO: model path
                 torch.save(
                     self.eps_model.state_dict(),
                     os.path.join(self.model_path, f"sample_{epoch}.pth"),
                 )
                 self.sample(n_samples=self.n_samples, filename=f"sample_{epoch}.png")
 
-    def _sample_x0(self, xt: torch.Tensor, n_steps: int):
+    def _sample_x0(self, xt: torch.Tensor, n_steps: int) -> torch.Tensor:
+        """Sample x_0"""
         n_samples = xt.shape[0]
         for t in range(n_steps)[::-1]:
             xt = self.diffusion.p_sample(
@@ -216,6 +313,11 @@ class Trainer:
         return xt
 
     def get_img(self, img: torch.Tensor) -> np.ndarray:
+        """
+        Get image from tensor
+        img: image tensor
+        """
+
         img = img.clip(0, 1)
         img = img.cpu().numpy()
         img = img.transpose(1, 2, 0)
@@ -223,7 +325,14 @@ class Trainer:
 
     def show_image(
         self, img: np.ndarray, title: Optional[str] = None, save: Optional[bool] = False
-    ):
+    ) -> None:
+        """
+        Show image.
+        img: image to show
+        title: title of the image
+        save: whether to save the image or not
+        """
+
         if title is None:
             title = f"{random.randint(0, 100000)}.png"
         if save:
@@ -231,16 +340,25 @@ class Trainer:
         # TODO: ez kell
         # plt.imshow(img)
 
-    # Sampling for GUI
     def sample_one_for_GUI(
         self,
         model_path: Optional[nn.Module] = None,
     ) -> np.ndarray:
+        """
+        Sample one image from the model for GUI.
+        model_path: path to the model
+        """
+
         with torch.no_grad():
+            # TODO: better solution for sampling only once
             self.set_seeds(np.random.randint(0, 100000))
+
+            # Add model to sample from
             if model_path is not None:
-                self.eps_model.load_state_dict(torch.load(model_path), strict=False)
+                self.add_model(model_path)
             self.eps_model.eval()
+
+            # Random noise to generate image from
             xt = torch.randn(
                 [
                     1,
@@ -250,7 +368,11 @@ class Trainer:
                 ],
                 device=self.device,
             )
+
+            # Sample x_0
             x0 = self._sample_x0(xt, self.n_steps)
+
+            # Get image
             img = self.get_img(x0[0])
             return img
 
@@ -259,14 +381,25 @@ class Trainer:
         n_samples: Optional[int] = 16,
         model_path: Optional[nn.Module] = None,
         batching: Optional[bool] = False,
-    ):
+    ) -> None:
+        """
+        Sample images from the model without saving figures.
+        n_samples: number of samples to generate
+        model_path: path to the model
+        batching: whether to sample in batches or not
+        """
+
         with torch.no_grad():
+            # Add model to sample from
             if model_path is not None:
-                self.eps_model.load_state_dict(torch.load(model_path))
+                self.add_model(model_path)
             self.eps_model.eval()
+
+            # TODO: refactor this
             if batching:
                 batches = n_samples // 16
                 for j in range(batches):
+                    # Random noise to generate image from
                     xt = torch.randn(
                         [
                             16,
@@ -276,11 +409,16 @@ class Trainer:
                         ],
                         device=self.device,
                     )
+
+                    # Sample x_0
                     x0 = self._sample_x0(xt, self.n_steps)
+
+                    # Get images
                     for i in range(16):
                         img = self.get_img(x0[i])
                         self.show_image(img, title=f"{16*j + i}.png", save=True)
             else:
+                # Random noise to generate image from
                 xt = torch.randn(
                     [
                         n_samples,
@@ -290,7 +428,11 @@ class Trainer:
                     ],
                     device=self.device,
                 )
+
+                # Sample x_0
                 x0 = self._sample_x0(xt, self.n_steps)
+
+                # Get images
                 for i in range(n_samples):
                     img = self.get_img(x0[i])
                     self.show_image(img, title=f"{i}.png", save=True)
@@ -300,19 +442,33 @@ class Trainer:
         n_samples: Optional[int] = 16,
         filename: Optional[str] = "sample.png",
         model_path: Optional[nn.Module] = None,
-    ):
+    ) -> None:
+        """
+        Sample images from the model with saving figures.
+        n_samples: number of samples to generate
+        filename: filename to save the figure
+        model_path: path to the model
+        """
+
         self.sample_without_figs(
             n_samples=n_samples, filename=filename, model_path=model_path
         )
         plt.savefig(os.path.join(self.fig_path, filename))
 
     def test_FID(self, path1: str, path2: str, batch_size: Optional[int] = 64) -> float:
+        """
+        Calculate FID score.
+        path1: path to the first dataset directory
+        path2: path to the second dataset directory
+        batch_size: batch size for calculating FID
+        """
+
         fid_value = fid_score.calculate_fid_given_paths(
             # TODO
             [path1, path2],
             batch_size=batch_size,
             device=self.device,
-            dims=2048,
+            dims=192,
         )
         return fid_value
 

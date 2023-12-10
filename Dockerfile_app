@@ -37,12 +37,4 @@ RUN echo 'custom_user:unstable-diffusion' | chpasswd
 
 SHELL ["/bin/bash", "-l", "-c"]
 
-# ENTRYPOINT service ssh start && echo $(ls) && jupyter-lab \
-#     --ip 0.0.0.0 \
-#     --port 8888 \
-#     --no-browser \
-#     --NotebookApp.notebook_dir='$home/src' \
-#     --ServerApp.terminado_settings="shell_command=['/bin/bash']" \
-#     --allow-root
-
 ENTRYPOINT service ssh start && streamlit run src/app.py

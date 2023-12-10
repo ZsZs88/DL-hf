@@ -29,11 +29,13 @@ You have to manually download the datasets to your local machine.
 [Danbooru Faces](https://www.kaggle.com/datasets/subinium/highresolution-anime-face-dataset-512x512/download?datasetVersionNumber=1)  
 After downloading and unzipping the data, change the dataset path in [docker-compose.yaml](https://github.com/ZsZs88/DL-hf/blob/f2817fa6fdb07b495011c3d05330e67f76cda19d/docker-compose.yml#L9).
 
-### How to run the Jupyter Lab in a Docker container
+### How to run the Docker containers?
 
-docker-compose build  
-docker-compose up  
-Open the link and change the 8888 port number to 8899.
+docker-compose build
+docker-compose up
+
+**Jupyter-notebook:** Open the link on your computer (localhost 8899)
+**Streamlit app:** Open the link on your computer (localhost 8501)
 
 # Running the pipeline
 
@@ -50,9 +52,3 @@ The training is done by running the cells in the jupyter notebook
 
 The evaluation calculates the FID (Frechét Inception Distance) score between the test dataset and the generated images
 That is the state-of-the-art testing method for generated images
-
-Advancements to come:
-
-- different containers for training and running the best model for sampling
-- Pipeline automatization without jupyter notebook
-- GUI for the sampling
